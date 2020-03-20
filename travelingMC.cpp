@@ -53,6 +53,73 @@ void swap(int * res, int i, int j){
   res[j] = temp;
 }
 
+float findNearestRoute(float * dists, int x, int * towns, int n, int visited, int * nextTown){
+  float distance = 0.0;
+  int selectedTown = towns[0];
+  float d = dist(dists,x,towns[0],n);
+  float d2;
+  int ntowns = n-visited;
+
+  for(int i=1; i<ntowns; i++){
+    d2 = dist(dists,x,towns[i],n);
+    if(d2 < d){
+      d = d2;
+      selectedTown = towns[i];
+    }
+  }
+  distance = d;
+  *nextTown = selectedTown;
+  return distance;
+}
+
+int * setDiff(int x, int * vec, int size){
+  int index = 0;
+  int * res = new int[size];
+  for(int i=0; i<size+1; i++){
+    if(vec[i] != x){
+      res[index] = vec[i];
+      index++;
+    }
+  }
+  return res;
+}
+
+float travellingGreedy(float * dists, int * res, int n){
+  float Tdist = 0.0;
+  int town[n] = { 0 };
+  
+  town[0] = rand() % n; 
+  printf("Primeira cidade: %d\n",town[0]);
+
+  int visited = 1;
+  int * to_visit = new int[n];
+  for(int i=0; i<n; i++){
+    to_visit[i] = i;
+  }
+
+  to_visit = setDiff(town[0],to_visit,n-1);
+
+  for(int i=0; i<n-1; i++){
+    printf("%d -",to_visit[i]);
+  }
+  printf("\n");
+
+  float distance;
+  int * nextTown = new int;
+
+  for(int i=1; i<n; i++){
+    distance = findNearestRoute(dists,town[i-1],to_visit,n,visited,nextTown);
+    printf("Next town is %d at a distance of %lf\n",*nextTown, distance);
+    visited++;
+    town[i] = *nextTown;
+    Tdist += distance;
+    to_visit = setDiff(town[i],to_visit,n-visited);
+  }
+  Tdist += dist(dists,town[n],town[0],n);
+  return Tdist;
+}
+
+
 float travelingMC(float * dists, int * res,int n){
   float Tdist = 0.0;
 
@@ -102,9 +169,12 @@ float travelingMC(float * dists, int * res,int n){
 
 int main(int argc, char const *argv[]) {
 
-  srand(time(NULL));
-  int n = 100;
+
+  srand(1);
+  int n = 10;
   int * res = new int[n];
+
+
 
   /*
   randperm(res,n);
@@ -112,9 +182,13 @@ int main(int argc, char const *argv[]) {
   for (int i = 0; i < n; i++) {
     std::cout << res[i] << std::endl;
   }*/
+
+  
   float * dists = new float [n*n];
   generateDists(dists, n);
-  travelingMC(dists,res,n);
+
+  travellingGreedy(dists,res,n);
+  
 
   return 0;
 }
