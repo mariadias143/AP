@@ -107,7 +107,7 @@ float travellingGreedy(float * dists, int * res, int n){
   float distance;
   int * nextTown = new int;
 
-  for(int i=1; i<n; i++){
+  for(int i=1; i<n-1; i++){
     distance = findNearestRoute(dists,town[i-1],to_visit,n,visited,nextTown);
     printf("Next town is %d at a distance of %lf\n",*nextTown, distance);
     visited++;
