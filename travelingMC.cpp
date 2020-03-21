@@ -3,6 +3,11 @@
 #include <random>
 #include <cstdlib>
 #include <math.h>
+#include <string.h>
+#include <limits>
+#include <algorithm>
+#include <iterator>
+#include <stdio.h>
 
 float dist(float * dists,int origin,int destination,int n_cities){
   return  dists[origin*n_cities + destination];
@@ -87,9 +92,9 @@ int * setDiff(int x, int * vec, int size){
 float travellingGreedy(float * dists, int * res, int n){
   float Tdist = 0.0;
   int town[n] = { 0 };
-  
-  town[0] = rand() % n; 
-  printf("Primeira cidade: %d\n",town[0]);
+
+  town[0] = rand() % n;
+  //printf("Primeira cidade: %d\n",town[0]);
 
   int visited = 1;
   int * to_visit = new int[n];
@@ -99,17 +104,18 @@ float travellingGreedy(float * dists, int * res, int n){
 
   to_visit = setDiff(town[0],to_visit,n-1);
 
+  /**
   for(int i=0; i<n-1; i++){
     printf("%d -",to_visit[i]);
   }
-  printf("\n");
+  printf("\n");*/
 
   float distance;
   int * nextTown = new int;
 
   for(int i=1; i<n; i++){
     distance = findNearestRoute(dists,town[i-1],to_visit,n,visited,nextTown);
-    printf("Next town is %d at a distance of %lf\n",*nextTown, distance);
+    //printf("Next town is %d at a distance of %lf\n",*nextTown, distance);
     visited++;
     town[i] = *nextTown;
     Tdist += distance;
@@ -156,7 +162,6 @@ float travelingMC(float * dists, int * res,int n){
       swap(res,rand_index,next1);
       Tdist += delta;
       i = 0;
-      std::cout << "entrei" << std::endl;
     }
     else{
       i++;
@@ -166,29 +171,108 @@ float travelingMC(float * dists, int * res,int n){
   return Tdist;
 }
 
+float travelingSA(float * dists, int * res,int n){
+  float Tdist = 0.0;
+
+  randperm(res,n);
+  Tdist = dist(dists,res[n-1],res[0],n);
+  for (size_t i = 0; i < n-1; i++) {
+    Tdist += dist(dists,res[i],res[i+1],n);
+  }
+
+  float randV;
+  float temp = 1.0;
+  int i = 0;
+  int rand_index,previous,next1,next2;
+  while (i < 100) {
+    rand_index = rand() % n;
+    if (rand_index == 0){
+      previous = n-1; next1 = 1; next2 = 2;
+    }
+    else if (rand_index == n-2){
+      previous = n-3; next1 = n-1; next2 = 0;
+    }
+    else if (rand_index == n-1){
+      previous = n-2; next1 = 0; next2 = 1;
+    }
+    else{
+      previous = rand_index-1; next1 = rand_index+1; next2 = rand_index+2;
+    }
+
+    randV = rand();
+    float delta =
+      dist(dists,res[previous],res[next1],n) +
+      dist(dists,res[rand_index],res[next2],n) -
+      dist(dists,res[previous],res[rand_index],n) -
+      dist(dists,res[next1],res[next2],n);
+
+    if (delta < 0 | exp(-delta/temp) >= randV) {
+      swap(res,rand_index,next1);
+      Tdist += delta;
+      if (delta != 0.0)
+        i = 0;
+    }
+    else{
+      i++;
+    }
+    temp *= 0.999;
+  }
+
+  return Tdist;
+}
+
 
 int main(int argc, char const *argv[]) {
 
 
-  srand(1);
-  int n = 10;
+  srand(time(NULL));
+  int n = atoi(argv[1]);
+  int procs = atoi(argv[2]);
   int * res = new int[n];
 
+  int * res_greedy = new int[n];
+  int * res_mc = new int[n];
+  int * res_sa = new int[n];
 
+  float minDist_greedy = std::numeric_limits<float>::max();
+  float minDist_mc = std::numeric_limits<float>::max();
+  float minDist_sa = std::numeric_limits<float>::max();
+  float tdist_ac = 0;
 
-  /*
-  randperm(res,n);
-
-  for (int i = 0; i < n; i++) {
-    std::cout << res[i] << std::endl;
-  }*/
-
-  
   float * dists = new float [n*n];
   generateDists(dists, n);
 
-  travellingGreedy(dists,res,n);
-  
+
+  for (int i = 0; i < procs; i++) {
+    tdist_ac = travellingGreedy(dists,res,n);
+
+    if (tdist_ac < minDist_greedy){
+      minDist_greedy = tdist_ac;
+      memcpy(res,res_greedy,sizeof(int)*n);
+    }
+  }
+
+  for (int i = 0; i < procs; i++) {
+    tdist_ac = travelingMC(dists,res,n);
+
+    if (tdist_ac < minDist_mc){
+      minDist_mc = tdist_ac;
+      memcpy(res,res_mc,sizeof(int)*n);
+    }
+  }
+
+  for (int i = 0; i < procs; i++) {
+    tdist_ac = travelingSA(dists,res,n);
+
+    if (tdist_ac < minDist_sa){
+      minDist_sa = tdist_ac;
+      memcpy(res,res_sa,sizeof(int)*n);
+    }
+  }
+
+  std::cout << "Greedy: " << minDist_greedy << std::endl;
+  std::cout << "MC: " << minDist_mc << std::endl;
+  std::cout << "SA: " << minDist_sa << std::endl;
 
   return 0;
 }
