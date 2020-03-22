@@ -209,9 +209,11 @@ float travellingGreedy(float * dists, int * res, int n){
   std::fill_n(town,n,0);
 
   town[0] = rand() % n;
+  res[0] = town[0];
 
   int visited = 1;
   int * to_visit = new int[n];
+  
   for(int i=0; i<n; i++){
     to_visit[i] = i;
   }
@@ -225,10 +227,19 @@ float travellingGreedy(float * dists, int * res, int n){
     distance = findNearestRoute(dists,town[i-1],to_visit,n,visited,&nextTown);
     visited++;
     town[i] = nextTown;
+    res[i] = town[i];
     Tdist += distance;
     to_visit = setDiff(town[i],to_visit,n-visited);
   }
+  
   Tdist += dist(dists,town[n-1],town[0],n);
+  /*
+  printf("Rota greedy\n");
+  for(int i=0; i<n; i++){
+    printf("%d -",res[i]);
+  }
+  printf("\n");
+  */
   return Tdist;
 }
 
@@ -239,6 +250,7 @@ float tourDistance(float * dists, int * route, int size){
   }
   return Tdist;
 }
+
 
 int * TwoOPTSwap(int * route, int i, int k, int size){
   int * new_route = new int[size];
@@ -267,6 +279,7 @@ float TwoOPT(float * dists, int n){
   float startingDistance = travellingGreedy(dists, route, n);
 
   while (improve < 20){
+
     best_distance = tourDistance(dists, route, n);
     for ( int i = 0; i < n - 1; i++ ){
       for ( int k = i + 1; k < n; k++){
@@ -282,6 +295,14 @@ float TwoOPT(float * dists, int n){
     }
     improve ++;
   }
+  /*
+  for(int i=0; i<n; i++){
+    printf("%d -",route[i]);
+  }
+  printf("\n");
+  */
+  delete[] new_route;
+  delete[] route;
   return best_distance;
 }
 
