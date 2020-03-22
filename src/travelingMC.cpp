@@ -37,6 +37,10 @@ void printResults (long long unsigned tt, int n_execs, int type) {
       std::cout << "SA Execution time: " << (tt / n_execs) << " usecs" << std::endl;
       break;
     }
+		case 3:{
+			std::cout << "Opt2 Execution time: " << (tt / n_execs) << " usecs" << std::endl;
+			break;
+		}
     default:{
       std::cout << "error" << std::endl;
     }
@@ -205,7 +209,6 @@ float travellingGreedy(float * dists, int * res, int n){
   std::fill_n(town,n,0);
 
   town[0] = rand() % n;
-  //printf("Primeira cidade: %d\n",town[0]);
 
   int visited = 1;
   int * to_visit = new int[n];
@@ -215,18 +218,11 @@ float travellingGreedy(float * dists, int * res, int n){
 
   to_visit = setDiff(town[0],to_visit,n-1);
 
-  /**
-  for(int i=0; i<n-1; i++){
-    printf("%d -",to_visit[i]);
-  }
-  printf("\n");*/
-
   float distance;
   int nextTown;
 
   for(int i=1; i<n; i++){
     distance = findNearestRoute(dists,town[i-1],to_visit,n,visited,&nextTown);
-    //printf("Next town is %d at a distance of %lf\n",*nextTown, distance);
     visited++;
     town[i] = nextTown;
     Tdist += distance;
@@ -234,6 +230,59 @@ float travellingGreedy(float * dists, int * res, int n){
   }
   Tdist += dist(dists,town[n-1],town[0],n);
   return Tdist;
+}
+
+float tourDistance(float * dists, int * route, int size){
+  float Tdist = 0.0;
+  for(int i=0; i<size-1; i++){
+    Tdist += dist(dists, route[i],route[i+1],size);
+  }
+  return Tdist;
+}
+
+int * TwoOPTSwap(int * route, int i, int k, int size){
+  int * new_route = new int[size];
+  for ( int c = 0; c <= i - 1; ++c )    {
+      new_route[c] = route[c];
+  }
+
+  int dec = 0;
+  for ( int c = i; c <= k; ++c )    {
+    new_route[c] = route[k-dec];
+    dec++;
+  }
+
+  for ( int c = k + 1; c < size; ++c )    {
+    new_route[c] = route[c];
+  }
+
+  return new_route;
+}
+
+float TwoOPT(float * dists, int n){
+  int improve = 0;
+  int * new_route = new int[n];
+  int * route = new int[n];
+  float best_distance = 0.0;
+  float startingDistance = travellingGreedy(dists, route, n);
+
+  while (improve < 20){
+    best_distance = tourDistance(dists, route, n);
+    for ( int i = 0; i < n - 1; i++ ){
+      for ( int k = i + 1; k < n; k++){
+        new_route = TwoOPTSwap(route, i, k, n);
+        float new_distance = tourDistance(dists, new_route, n);
+
+        if ( new_distance < best_distance ){
+          improve = 0;
+          route = new_route;
+          best_distance = new_distance;
+        }
+      }
+    }
+    improve ++;
+  }
+  return best_distance;
 }
 
 
@@ -339,10 +388,12 @@ void travellingMain(int n, int procs){
 	int * res_greedy = new int[n];
   int * res_mc = new int[n];
   int * res_sa = new int[n];
+	int * res_twoOPT = new int[n];
 
 	float minDist_greedy = std::numeric_limits<float>::max();
   float minDist_mc = std::numeric_limits<float>::max();
   float minDist_sa = std::numeric_limits<float>::max();
+	float minDist_twoOPT = std::numeric_limits<float>::max();
   float tdist_ac = 0;
 
 	float * dists = new float [n*n];
@@ -361,6 +412,17 @@ void travellingMain(int n, int procs){
   }
   tt = stop();
   printResults(tt,procs,0);
+
+	start();
+	for (int i = 0; i < procs; i++) {
+    tdist_ac = TwoOPT(dists,n);
+    if (tdist_ac < minDist_twoOPT){
+      minDist_twoOPT = tdist_ac;
+      memcpy(res,res_twoOPT,sizeof(int)*n);
+    }
+  }
+	tt = stop();
+  printResults(tt,procs,3);
 
   start();
   for (int i = 0; i < procs; i++) {
@@ -391,6 +453,7 @@ void travellingMain(int n, int procs){
 
 	std::cout << "Results: " << std::endl;
 
+	std::cout << "2-opt: " << minDist_twoOPT << std::endl;
   std::cout << "Greedy: " << minDist_greedy << std::endl;
   std::cout << "MC: " << minDist_mc << std::endl;
   std::cout << "SA: " << minDist_sa << std::endl;
