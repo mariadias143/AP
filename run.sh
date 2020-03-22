@@ -1,6 +1,6 @@
 #!/bin/sh
 #PBS -N AP
-#PBS -l walltime=0:15:00
+#PBS -l walltime=2:00:00
 #PBS -l nodes=1:ppn=48:r662
 
 

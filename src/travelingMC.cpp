@@ -213,7 +213,7 @@ float travellingGreedy(float * dists, int * res, int n){
 
   int visited = 1;
   int * to_visit = new int[n];
-  
+
   for(int i=0; i<n; i++){
     to_visit[i] = i;
   }
@@ -231,7 +231,7 @@ float travellingGreedy(float * dists, int * res, int n){
     Tdist += distance;
     to_visit = setDiff(town[i],to_visit,n-visited);
   }
-  
+
   Tdist += dist(dists,town[n-1],town[0],n);
   /*
   printf("Rota greedy\n");
@@ -252,43 +252,53 @@ float tourDistance(float * dists, int * route, int size){
 }
 
 
-int * TwoOPTSwap(int * route, int i, int k, int size){
-  int * new_route = new int[size];
+void TwoOPTSwap(int * route,int * aux, int i, int k, int size){
+  //int * new_route = new int[size];
+
+	memcpy(aux,route,sizeof(int)*i);
+
+	/**
   for ( int c = 0; c <= i - 1; ++c )    {
-      new_route[c] = route[c];
-  }
+      aux[c] = route[c];
+  }*/
 
   int dec = 0;
   for ( int c = i; c <= k; ++c )    {
-    new_route[c] = route[k-dec];
+    aux[c] = route[k-dec];
     dec++;
   }
 
-  for ( int c = k + 1; c < size; ++c )    {
-    new_route[c] = route[c];
-  }
+	memcpy((aux+k+1),(route+k+1),sizeof(int)*(size-(k+1)));
 
-  return new_route;
+	/*
+  for ( int c = k + 1; c < size; ++c )    {
+    aux[c] = route[c];
+  }*/
+
+  //return new_route;
 }
 
 float TwoOPT(float * dists, int n){
   int improve = 0;
+	int * temp;
   int * new_route = new int[n];
   int * route = new int[n];
   float best_distance = 0.0;
   float startingDistance = travellingGreedy(dists, route, n);
+	best_distance = tourDistance(dists, route, n);
 
-  while (improve < 20){
-
-    best_distance = tourDistance(dists, route, n);
+  while (improve < 10){
     for ( int i = 0; i < n - 1; i++ ){
       for ( int k = i + 1; k < n; k++){
-        new_route = TwoOPTSwap(route, i, k, n);
+        TwoOPTSwap(route,new_route, i, k, n);
+
         float new_distance = tourDistance(dists, new_route, n);
 
         if ( new_distance < best_distance ){
           improve = 0;
+					temp = route;
           route = new_route;
+					new_route = temp;
           best_distance = new_distance;
         }
       }
@@ -428,7 +438,7 @@ void travellingMain(int n, int procs){
 
     if (tdist_ac < minDist_greedy){
       minDist_greedy = tdist_ac;
-      memcpy(res,res_greedy,sizeof(int)*n);
+      memcpy(res_greedy,res,sizeof(int)*n);
     }
   }
   tt = stop();
@@ -439,7 +449,7 @@ void travellingMain(int n, int procs){
     tdist_ac = TwoOPT(dists,n);
     if (tdist_ac < minDist_twoOPT){
       minDist_twoOPT = tdist_ac;
-      memcpy(res,res_twoOPT,sizeof(int)*n);
+      //memcpy(res_twoOP,res,sizeof(int)*n);
     }
   }
 	tt = stop();
@@ -451,7 +461,7 @@ void travellingMain(int n, int procs){
 
     if (tdist_ac < minDist_mc){
       minDist_mc = tdist_ac;
-      memcpy(res,res_mc,sizeof(int)*n);
+      memcpy(res_mc,res,sizeof(int)*n);
     }
   }
 
@@ -465,7 +475,7 @@ void travellingMain(int n, int procs){
 
     if (tdist_ac < minDist_sa){
       minDist_sa = tdist_ac;
-      memcpy(res,res_sa,sizeof(int)*n);
+      memcpy(res_sa,res,sizeof(int)*n);
     }
   }
 
