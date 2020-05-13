@@ -101,7 +101,11 @@ double compute_diff(double * w, double * u, int size){
   return max;
 }
 
-//versão super fast RED e BLack
+/**
+
+Implementação 3: Versão paralela com o uso de blocos. Red e Black calculados na minha linha.
+
+*/
 int compute_block_row_parallel(double * w, int size,double p, double tolerance, int nthreads, int block_X, int block_Y){
 
   double * u = new double[size*size];
@@ -197,7 +201,7 @@ int compute_block_row_parallel(double * w, int size,double p, double tolerance, 
           }
         }
       }
-
+      //bordas
       #pragma omp for
       for(int i = 0; i < size - block_X; i+= block_X){
         for(int j = 0; j < size; j+= block_Y){
@@ -230,8 +234,12 @@ int compute_block_row_parallel(double * w, int size,double p, double tolerance, 
   return iter;
 }
 
-//versão sequencial Red e black juntos
-int compute_test(double * w, int size,double p, double tolerance){
+/**
+
+Implementação 3: Versão sequencial com o uso de blocos. Red e Black calculados na minha linha.
+
+*/
+int compute_block_row_sequencial(double * w, int size,double p, double tolerance){
 
   double * u = new double[size*size];
   double aux = 1.0 - p;
@@ -346,8 +354,12 @@ int compute_test(double * w, int size,double p, double tolerance){
   return iter;
 }
 
-//versão Sequencial blocos
-int compute_test_2(double * w, int size,double p, double tolerance){
+/**
+
+Nenhuma das implementações do relatório. Versão sequencial para uma versão naive do uso de blocos ainda com as iterações Red e Black separadas.
+
+*/
+int compute_block_row_sequencial_naive(double * w, int size,double p, double tolerance){
   double * u = new double[size*size];
   double aux = 1.0 - p;
   double diff = 1.0 + tolerance;
@@ -401,8 +413,12 @@ int compute_test_2(double * w, int size,double p, double tolerance){
   return iter;
 }
 
-//versão blocos com RED e Black separados
-int compute_steady_state_optimized(double * w, int size,double p, double tolerance, int nthreads){
+/**
+
+Nenhuma das implementações do relatório. Versão paralela para uma versão naive do uso de blocos ainda com as iterações Red e Black separadas.
+
+*/
+int compute_block_row_parallel_naive(double * w, int size,double p, double tolerance, int nthreads){
   //Red points
   double * u = new double[size*size];
   double aux = 1.0 - p;
@@ -471,8 +487,12 @@ int compute_steady_state_optimized(double * w, int size,double p, double toleran
   return iter;
 }
 
-//versão stor toda paralelisada
-int compute_steady_state(double * w, int size,double p, double tolerance, int nthreads){
+/**
+
+Implementação 2 do relatório: Versão totalmente paralela e sem blocos com a implementação dada pelo professor
+
+*/
+int compute_noblock_row_parallel(double * w, int size,double p, double tolerance, int nthreads){
 
   //Red points
   double * u = new double[size*size];
@@ -520,7 +540,14 @@ int compute_steady_state(double * w, int size,double p, double tolerance, int nt
   return iter;
 }
 
-int compute_steady_state_naive_computeparallel(double * w, int size,double p, double tolerance, int nthreads){
+
+/**
+
+Implementação 1 do relatório: Versão paralela e sem blocos com a implementação dada pelo professor.
+
+*/
+
+int compute_noblock_row_semi_parallel(double * w, int size,double p, double tolerance, int nthreads){
 
   //Red points
   double * u = new double[size*size];
@@ -561,7 +588,13 @@ int compute_steady_state_naive_computeparallel(double * w, int size,double p, do
   return iter;
 }
 
-int compute_steady_state_naive_seq(double * w, int size,double p, double tolerance){
+/**
+
+Implementação 1 do relatório: Versão sequencial e sem blocos com a implementação dada pelo professor.
+
+*/
+
+int  compute_noblock_sequencial(double * w, int size,double p, double tolerance){
 
   //Red points
   double * u = new double[size*size];
@@ -634,13 +667,13 @@ int main(int argc, char const *argv[]) {
 
 
   start();
-  int iter1 = compute_steady_state_naive_computeparallel(tmp,SIZE,p,TOL,N_THREADS);
+  int iter1 = compute_noblock_row_parallel(tmp,SIZE,p,TOL,N_THREADS);
   tt = stop();
   std::cout << "Parallel Compute no Block: " << tt << " usecs" << std::endl;
 
   start();
   //int iter = compute_block_row_parallel(w,SIZE,p,TOL,N_THREADS,X_BLOCKS,Y_BLOCKS);
-  int iter = compute_steady_state_naive_seq(w,SIZE,p,TOL);
+  int iter = compute_noblock_sequencial(w,SIZE,p,TOL);
   tt = stop();
   std::cout << "Sequencial: " << tt << " usecs" << std::endl;
 
