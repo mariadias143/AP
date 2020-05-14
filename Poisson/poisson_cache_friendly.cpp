@@ -103,6 +103,202 @@ double compute_diff(double * w, double * u, int size){
 
 /**
 
+Implementação 3 com otimização. Não faz copia.
+
+*/
+
+int compute_block_row_parallel_optimized(double * w, int size,double p, double tolerance, int nthreads, int block_X, int block_Y){
+
+  double * u = new double[size*size];
+  double aux = 1.0 - p;
+  double diff = 1.0 + tolerance;
+  int iter = 0;
+  int I_BLOCK_SIZE;
+  double localMax = 0.0,temp,max_actual;
+
+  while(diff > tolerance){
+    localMax = 0.0;
+    diff = 0.0;
+    #pragma omp parallel num_threads(nthreads)
+    {
+      #pragma omp single
+        start_update();
+
+      #pragma omp for private(localMax,temp,max_actual)
+      for(int i = 0; i < size; i += block_X){
+        //primeiros 2 blocos Red à mão
+        I_BLOCK_SIZE = (i + block_X == size) ? block_X - 1 : block_X;
+        int ii = i == 0 ? 1 : i;
+        int j = 0;
+        int maxi = i + I_BLOCK_SIZE; // max i para os blocos Red
+        int maxib = (i + block_X == size) ? i + I_BLOCK_SIZE : i + I_BLOCK_SIZE - 1;// max i para os blocos Black
+        // BLOCO 1 RED
+        for(; ii < maxi; ii++){
+          int maxj = j + block_Y;
+          int jj = 1 + ((ii + 1) & 1);
+          for(; jj < maxj; jj += 2){
+            temp = w[ii*size + jj];
+
+            w[ii*size + jj] =
+              aux*w[ii*size + jj] + p * ( w[(ii-1)*size + jj] + w[ii*size + jj - 1] + w[ii*size + jj + 1] + w[(ii+1)*size + jj] ) / 4.0;
+
+            max_actual = fabs(w[ii*size + jj] - temp);
+            if (max_actual > localMax)
+              localMax = max_actual;
+          }
+        }
+        j += block_Y;
+        ii = i == 0 ? 1 : i;
+        //BLOCO 2 RED
+        for(; ii < maxi; ii++){
+          int maxj = j + block_Y;
+          int jj = j + (ii & 1) ;
+          for(; jj < maxj; jj += 2){
+            temp = w[ii*size + jj];
+
+            w[ii*size + jj] =
+              aux*w[ii*size + jj] + p * ( w[(ii-1)*size + jj] + w[ii*size + jj - 1] + w[ii*size + jj + 1] + w[(ii+1)*size + jj] ) / 4.0;
+
+            max_actual = fabs(w[ii*size + jj] - temp);
+            if (max_actual > localMax)
+              localMax = max_actual;
+          }
+        }
+        j += block_Y;
+        int offset = 2 * block_Y;
+
+        //loop genérico
+        for(; j < size; j += block_Y){
+          ii = i == 0 ? 1 : i + 1;
+          // -1 por causa das bordas ! acertar no fim ! Block Black - 2
+          for(; ii < maxib; ii++){
+            int j_offset = j - offset;
+            int maxj = j_offset + block_Y;
+            int jj = j_offset == 0 ? 1 + (ii & 1) : j_offset + ((ii+1) & 1);
+            for(; jj < maxj; jj += 2){
+              temp = w[ii*size + jj];
+
+              w[ii*size + jj] =
+                aux*w[ii*size + jj] + p * ( w[(ii-1)*size + jj] + w[ii*size + jj - 1] + w[ii*size + jj + 1] + w[(ii+1)*size + jj] ) / 4.0;
+
+              max_actual = fabs(w[ii*size + jj] - temp);
+              if (max_actual > localMax)
+                localMax = max_actual;
+            }
+          }
+          // Block Red
+          ii = i == 0 ? 1 : i;
+          for(; ii < maxi; ii++){
+            int maxj = j + block_Y == size ? j + block_Y - 1 : j + block_Y ;
+            int jj = j + (ii & 1);
+            for(; jj < maxj; jj += 2){
+              temp = w[ii*size + jj];
+
+              w[ii*size + jj] =
+                aux*w[ii*size + jj] + p * ( w[(ii-1)*size + jj] + w[ii*size + jj - 1] + w[ii*size + jj + 1] + w[(ii+1)*size + jj] ) / 4.0;
+
+              max_actual = fabs(w[ii*size + jj] - temp);
+              if (max_actual > localMax)
+                localMax = max_actual;
+            }
+          }
+        }
+        j -= offset;
+        //ultimos 2 blocos BLACK
+        ii = i == 0 ? 1 : i + 1;
+        for(; ii < maxib; ii++){
+          int maxj = j + block_Y;
+          int jj = j == 0 ? 1 + (ii & 1) : j + ((ii+1) & 1);
+          for(; jj < maxj; jj += 2){
+            temp = w[ii*size + jj];
+
+            w[ii*size + jj] =
+              aux*w[ii*size + jj] + p * ( w[(ii-1)*size + jj] + w[ii*size + jj - 1] + w[ii*size + jj + 1] + w[(ii+1)*size + jj] ) / 4.0;
+
+            max_actual = fabs(w[ii*size + jj] - temp);
+            if (max_actual > localMax)
+              localMax = max_actual;
+          }
+        }
+        j += block_Y;
+        ii = i == 0 ? 1 : i + 1;
+        for(; ii < maxib; ii++){
+          int maxj = j + block_Y - 1;
+          int jj = j + ((ii+1) & 1);
+          for(; jj < maxj; jj += 2){
+            temp = w[ii*size + jj];
+
+            w[ii*size + jj] =
+              aux*w[ii*size + jj] + p * ( w[(ii-1)*size + jj] + w[ii*size + jj - 1] + w[ii*size + jj + 1] + w[(ii+1)*size + jj] ) / 4.0;
+
+            max_actual = fabs(w[ii*size + jj] - temp);
+            if (max_actual > localMax)
+              localMax = max_actual;
+          }
+        }
+
+        #pragma omp critical
+        {
+          if (localMax > diff){
+            diff = localMax;
+          }
+        }
+        localMax = 0.0;
+      }
+      //bordas
+      #pragma omp for private(localMax,temp,max_actual)
+      for(int i = 0; i < size - block_X; i+= block_X){
+        for(int j = 0; j < size; j+= block_Y){
+          int J_BLOCK_SIZE = (j + block_Y == size) ? block_Y - 1 : block_Y;
+          int ii = i + block_X - 1;
+          int jj = j == 0 ? 1 + (ii & 1) : j + ((ii+1) & 1) ;
+          int maxj = j + J_BLOCK_SIZE;
+          for(; jj < maxj; jj += 2){
+            temp = w[ii*size + jj];
+
+            w[ii*size + jj] =
+              aux*w[ii*size + jj] + p * ( w[(ii-1)*size + jj] + w[ii*size + jj - 1] + w[ii*size + jj + 1] + w[(ii+1)*size + jj] ) / 4.0;
+
+            max_actual = fabs(w[ii*size + jj] - temp);
+            if (max_actual > localMax)
+              localMax = max_actual;
+          }
+
+          ii = i + block_X;
+          jj = j == 0 ? 1 + (ii & 1) : j + ((ii+1) & 1) ;
+          for(; jj < maxj; jj += 2){
+            temp = w[ii*size + jj];
+
+            w[ii*size + jj] =
+              aux*w[ii*size + jj] + p * ( w[(ii-1)*size + jj] + w[ii*size + jj - 1] + w[ii*size + jj + 1] + w[(ii+1)*size + jj] ) / 4.0;
+
+            max_actual = fabs(w[ii*size + jj] - temp);
+            if (max_actual > localMax)
+              localMax = max_actual;
+          }
+        }
+
+        #pragma omp critical
+        {
+          if (localMax > diff){
+            diff = localMax;
+          }
+        }
+        localMax = 0.0;
+      }
+    }
+
+    end_update();
+
+    iter++;
+  }
+
+  std::cout << "Computational time: " << measure << std::endl;
+  return iter;
+}
+
+/**
+
 Implementação 3: Versão paralela com o uso de blocos. Red e Black calculados na minha linha.
 
 */
@@ -665,6 +861,8 @@ int main(int argc, char const *argv[]) {
   initBoundaries(w,SIZE);
   initBoundaries(tmp,SIZE);
 
+  std::cout << p << std::endl;
+
 
   start();
   int iter1 = compute_noblock_row_parallel(tmp,SIZE,p,TOL,N_THREADS);
@@ -672,8 +870,8 @@ int main(int argc, char const *argv[]) {
   std::cout << "Parallel Compute no Block: " << tt << " usecs" << std::endl;
 
   start();
-  //int iter = compute_block_row_parallel(w,SIZE,p,TOL,N_THREADS,X_BLOCKS,Y_BLOCKS);
-  int iter = compute_noblock_sequencial(w,SIZE,p,TOL);
+  int iter = compute_block_row_parallel(w,SIZE,p,TOL,N_THREADS,X_BLOCKS,Y_BLOCKS);
+  //int iter = compute_noblock_sequencial(w,SIZE,p,TOL);
   tt = stop();
   std::cout << "Sequencial: " << tt << " usecs" << std::endl;
 
